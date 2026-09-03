@@ -45,15 +45,26 @@ def _wikipedia_summary(query: str) -> str | None:
             break
     if subject == query.lower():
         return None
-    title = quote_plus(subject.replace(" ", "_"))
-    request = Request(
-        f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}",
-        headers={"User-Agent": USER_AGENT},
-    )
-    with urlopen(request, timeout=10) as response:
-        data = json.loads(response.read().decode("utf-8", errors="ignore"))
-    extract = data.get("extract")
-    return str(extract) if extract else None
+    subjects = [subject]
+    if subject.startswith("the "):
+        subjects.append(subject[4:])
+    if subject.removeprefix("the ") == "interstellar":
+        subjects.insert(0, "interstellar (film)")
+    for candidate in subjects:
+        title = quote_plus(candidate.replace(" ", "_"))
+        request = Request(
+            f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}",
+            headers={"User-Agent": USER_AGENT},
+        )
+        try:
+            with urlopen(request, timeout=10) as response:
+                data = json.loads(response.read().decode("utf-8", errors="ignore"))
+        except Exception:
+            continue
+        extract = data.get("extract")
+        if extract:
+            return str(extract)
+    return None
 
 
 def run(parameters: dict[str, Any]) -> str:
