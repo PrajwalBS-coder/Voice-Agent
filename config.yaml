@@ -13,3 +13,4 @@ voice:
   tts_voice: "Hazel"
   tts_rate: 155
   tts_volume: 1.0
+  default_emotion: "calm"

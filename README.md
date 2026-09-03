@@ -15,6 +15,10 @@ Without `OPENAI_API_KEY`, the intent parser uses a small deterministic fallback 
 
 Secrets belong in `.env`. Add your key as `OPENAI_API_KEY=...`; `.env` is excluded from version control. See `.env.example` for the template.
 
+## Adding capabilities
+
+Add a skill module with a `run(parameters)` function, then register it once in `skill_registry.py`. The intent validator, router, and LLM prompt read the same registry automatically; there is no separate `VALID_ACTIONS` list to update.
+
 ## Voice mode
 
 With a microphone connected, start push-to-talk voice mode:
@@ -25,7 +29,7 @@ python main.py --voice --duration 5
 
 Speak when Jarvis says “Listening.” It detects when you stop speaking, then transcribes the command, runs it, and speaks the response. The first use of Whisper downloads the configured model. Press Ctrl+C to exit.
 
-The default TTS voice is Microsoft David with a slower, formal AI-style delivery. Change `tts_voice` to `Hazel` or `Zira`, or adjust `tts_rate` in `config.yaml`. The exact movie JARVIS voice is not included with Windows.
+The default TTS voice is Microsoft David with a slower, formal AI-style delivery. Change `tts_voice` to `Hazel` or `Zira`, or adjust `tts_rate` in `config.yaml`. Jarvis also uses calm, happy, and empathetic delivery profiles by changing rate and volume. The exact movie JARVIS voice is not included with Windows.
 
 ## Code changes by voice
 

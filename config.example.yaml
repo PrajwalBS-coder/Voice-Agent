@@ -16,3 +16,4 @@ voice:
   tts_voice: "David"
   tts_rate: 155
   tts_volume: 1.0
+  default_emotion: "calm"

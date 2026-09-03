@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-VALID_ACTIONS = {"take_picture", "take_screenshot", "open_video", "open_app", "tell_time", "about_me", "greeting", "thanks", "voice_help", "code_change", "search_web", "unknown"}
+from skill_registry import available_actions
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,7 @@ class Intent:
 
 def validate_intent(value: dict[str, Any]) -> Intent:
     action = value.get("action", "unknown")
-    if action not in VALID_ACTIONS:
+    if action not in available_actions():
         action = "unknown"
     parameters = value.get("parameters", {})
     if not isinstance(parameters, dict):
@@ -54,7 +54,7 @@ class IntentParser:
                     "role": "system",
                     "content": (
                         "Return only JSON with action and parameters. Valid actions are: "
-                        "take_picture, take_screenshot, open_video, open_app, tell_time, about_me, greeting, thanks, voice_help, code_change, search_web, unknown. "
+                        f"{', '.join(sorted(available_actions()))}. "
                         "Use name for open_video/open_app and no parameters for other actions."
                     ),
                 },
@@ -86,6 +86,11 @@ class IntentParser:
         edit_words = ("change", "edit", "modify", "update", "add", "remove", "fix")
         if any(word in transcript for word in edit_words) and "code" in transcript:
             return Intent("code_change", {"request": transcript})
+        document_words = ("document", "report", "guide", "notes")
+        if any(word in transcript for word in document_words) and any(word in transcript for word in ("create", "make", "give", "write", "generate")):
+            return Intent("create_document", {"topic": transcript})
+        if "ai tools" in transcript or "artificial intelligence tools" in transcript:
+            return Intent("ai_tools", {})
         if transcript.startswith(("open video ", "play video ")):
             return Intent("open_video", {"name": transcript.split(" ", 2)[-1]})
         if transcript.startswith(("open app ", "launch ", "open ")):

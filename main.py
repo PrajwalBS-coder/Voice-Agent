@@ -20,6 +20,16 @@ from stt import SpeechToText
 from tts import speak
 
 
+def response_emotion(action: str, result: str) -> str:
+    if action in {"take_picture", "take_screenshot", "open_video", "open_app"} and not result.startswith(("I could", "I do not", "The command")):
+        return "happy"
+    if result.startswith(("I could", "I do not", "The command", "I found no")):
+        return "empathetic"
+    if action == "code_change":
+        return "calm"
+    return "calm"
+
+
 def handle_command(command: str, config: dict) -> str:
     llm_config = config["llm"]
     intent = IntentParser(
@@ -35,6 +45,7 @@ def handle_command(command: str, config: dict) -> str:
         "videos": config["media"].get("videos", {}),
         "apps": config.get("apps", {}),
         "pictures_dir": config["media"].get("pictures_dir", "pictures"),
+        "documents_dir": config.get("documents_dir", "documents"),
     }
     result = run_intent(intent.__class__(intent.action, parameters))
     voice_config = config["voice"]
@@ -44,6 +55,7 @@ def handle_command(command: str, config: dict) -> str:
         voice_config.get("tts_voice", "David"),
         voice_config.get("tts_rate", 155),
         voice_config.get("tts_volume", 1.0),
+        response_emotion(intent.action, result),
     )
     return result
 
