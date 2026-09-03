@@ -1,0 +1,119 @@
+"""Jarvis-lite command-line orchestrator.
+
+Use --text for a hardware-free smoke test. Voice recording and wake-word
+adapters can be added without changing intent parsing or skill routing.
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+from tempfile import gettempdir
+
+from dotenv import load_dotenv
+
+from config import load_config
+from code_agent import CodeAgent
+from intent_parser import IntentParser
+from router import run_intent
+from stt import SpeechToText
+from tts import speak
+
+
+def handle_command(command: str, config: dict) -> str:
+    llm_config = config["llm"]
+    intent = IntentParser(
+        model=llm_config["model"],
+        api_key_env=llm_config["api_key_env"],
+    ).parse(command)
+    if intent.action == "unknown":
+        intent = intent.__class__("search_web", {"query": command})
+    if intent.action == "code_change":
+        return handle_code_change(command, config)
+    parameters = {
+        **intent.parameters,
+        "videos": config["media"].get("videos", {}),
+        "apps": config.get("apps", {}),
+        "pictures_dir": config["media"].get("pictures_dir", "pictures"),
+    }
+    result = run_intent(intent.__class__(intent.action, parameters))
+    voice_config = config["voice"]
+    speak(
+        result,
+        voice_config.get("tts_enabled", False),
+        voice_config.get("tts_voice", "David"),
+        voice_config.get("tts_rate", 155),
+        voice_config.get("tts_volume", 1.0),
+    )
+    return result
+
+
+def handle_code_change(command: str, config: dict) -> str:
+    try:
+        proposal = CodeAgent(model=config.get("coding", {}).get("model", "qwen2.5-coder:7b")).propose(command)
+    except Exception as error:
+        return f"I could not prepare that code change. Is Ollama running with the coding model installed? Details: {error}"
+    edited_files = ", ".join(edit["path"] for edit in proposal["edits"])
+    print(f"Proposed change: {proposal.get('summary', 'No summary provided.')}")
+    print(f"Files: {edited_files}")
+    try:
+        confirmation = input("Type CONFIRM to apply this code change: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        return "Code change cancelled."
+    if confirmation != "CONFIRM":
+        return "Code change cancelled."
+    try:
+        CodeAgent(model=config.get("coding", {}).get("model", "qwen2.5-coder:7b")).apply(proposal)
+    except Exception as error:
+        return f"I could not apply that code change: {error}"
+    return f"Code change applied to {edited_files}."
+
+
+def run_voice_mode(config: dict, duration: int) -> None:
+    from audio import record_audio_until_silence
+
+    transcriber = SpeechToText(config["voice"].get("stt_model", "base.en"))
+    print("Jarvis voice mode is ready. Speak after the prompt; I will respond when you stop.")
+    while True:
+        try:
+            audio_path = Path(gettempdir()) / "jarvis-command.wav"
+            transcript = transcriber.transcribe(record_audio_until_silence(audio_path, duration))
+            print(f"You said: {transcript or '[nothing detected]'}")
+            if transcript:
+                print(handle_command(transcript, config))
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+
+
+def main() -> None:
+    load_dotenv()
+    argument_parser = argparse.ArgumentParser(description="Jarvis-lite local voice assistant")
+    argument_parser.add_argument("--config", default="config.yaml")
+    argument_parser.add_argument("--text", help="Run one command without microphone input")
+    argument_parser.add_argument("--voice", action="store_true", help="Listen for spoken commands")
+    argument_parser.add_argument("--duration", type=int, default=5, help="Seconds to record per command")
+    arguments = argument_parser.parse_args()
+    config = load_config(arguments.config)
+
+    if arguments.text:
+        print(handle_command(arguments.text, config))
+        return
+
+    if arguments.voice:
+        run_voice_mode(config, arguments.duration)
+        return
+
+    print("Jarvis is ready. Type a command, or press Ctrl+C to exit.")
+    while True:
+        try:
+            command = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+        if command:
+            print(handle_command(command, config))
+
+
+if __name__ == "__main__":
+    main()

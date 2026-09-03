@@ -1,0 +1,15 @@
+media:
+  videos: {}
+  pictures_dir: "pictures"
+apps: {}
+llm:
+  model: "gpt-4o-mini"
+  api_key_env: "OPENAI_API_KEY"
+coding:
+  model: "qwen2.5-coder:7b"
+voice:
+  stt_model: "base.en"
+  tts_enabled: true
+  tts_voice: "Hazel"
+  tts_rate: 155
+  tts_volume: 1.0
