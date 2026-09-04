@@ -75,6 +75,8 @@ class IntentParser:
             return Intent("take_screenshot", {})
         if any(phrase in transcript for phrase in ("what time", "tell me the time", "current time")):
             return Intent("tell_time", {})
+        if any(phrase in transcript for phrase in ("tell me a joke", "give me a joke", "make me laugh", "say a joke")):
+            return Intent("tell_joke", {})
         if any(phrase in transcript for phrase in ("tell me about you", "who are you", "what are you")):
             return Intent("about_me", {})
         if transcript in {"hi", "hello", "hey", "good morning", "good afternoon", "good evening"}:

@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from skills import about_me, ai_tools, create_document, greeting, open_app, open_video, search_web, take_picture, take_screenshot, tell_time, thanks, voice_help
+from skills import about_me, ai_tools, create_document, greeting, open_app, open_video, search_web, take_picture, take_screenshot, tell_joke, tell_time, thanks, voice_help
 
 Skill = Callable[[dict[str, Any]], str]
 
@@ -13,6 +13,7 @@ SKILLS: dict[str, Skill] = {
     "open_video": open_video.run,
     "open_app": open_app.run,
     "tell_time": tell_time.run,
+    "tell_joke": tell_joke.run,
     "about_me": about_me.run,
     "greeting": greeting.run,
     "thanks": thanks.run,
