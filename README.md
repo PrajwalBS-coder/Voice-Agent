@@ -29,6 +29,27 @@ python main.py --voice --duration 5
 
 Speak when Jarvis says “Listening.” It detects when you stop speaking, then transcribes the command, runs it, and speaks the response. The first use of Whisper downloads the configured model. Press Ctrl+C to exit.
 
+## Start the control UI
+
+See [BE/README.md](BE/README.md) for the API details and [FE/README.md](FE/README.md) for the Svelte application details.
+
+Install backend dependencies and start the API from the workspace root:
+
+```powershell
+uv pip install --python .venv/Scripts/python.exe -r requirements.txt
+uv run --python .venv/Scripts/python.exe uvicorn BE.main:app --reload --port 8000
+```
+
+In a second terminal, start the Svelte frontend:
+
+```powershell
+cd FE
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. Use the UI to start or stop the voice agent and monitor its live status and logs.
+
 The default TTS voice is Microsoft David with a slower, formal AI-style delivery. Change `tts_voice` to `Hazel` or `Zira`, or adjust `tts_rate` in `config.yaml`. Jarvis also uses calm, happy, and empathetic delivery profiles by changing rate and volume. The exact movie JARVIS voice is not included with Windows.
 
 ## Code changes by voice
