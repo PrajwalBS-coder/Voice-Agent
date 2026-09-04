@@ -1,6 +1,7 @@
 """Microphone recording adapter."""
 
 from pathlib import Path
+from datetime import datetime
 
 
 def record_audio_until_silence(

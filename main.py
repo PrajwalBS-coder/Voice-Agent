@@ -7,13 +7,14 @@ adapters can be added without changing intent parsing or skill routing.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from pathlib import Path
-from tempfile import gettempdir
 
 from dotenv import load_dotenv
 
 from config import load_config
 from code_agent import CodeAgent
+from database import InteractionDatabase
 from intent_parser import IntentParser
 from router import run_intent
 from stt import SpeechToText
@@ -30,7 +31,19 @@ def response_emotion(action: str, result: str) -> str:
     return "calm"
 
 
-def handle_command(command: str, config: dict) -> str:
+def get_database_url() -> str:
+    import os
+
+    return "postgresql://{user}:{password}@{host}:{port}/{name}".format(
+        user=os.environ["DB_USER"],
+        password=os.environ["DB_PASSWORD"],
+        host=os.environ["DB_HOST"],
+        port=os.environ["DB_PORT"],
+        name=os.environ["DB_NAME"],
+    )
+
+
+def handle_command(command: str, config: dict, input_audio_path: Path | None = None) -> str:
     llm_config = config["llm"]
     intent = IntentParser(
         model=llm_config["model"],
@@ -49,14 +62,35 @@ def handle_command(command: str, config: dict) -> str:
     }
     result = run_intent(intent.__class__(intent.action, parameters))
     voice_config = config["voice"]
-    speak(
-        result,
-        voice_config.get("tts_enabled", False),
-        voice_config.get("tts_voice", "David"),
-        voice_config.get("tts_rate", 155),
-        voice_config.get("tts_volume", 1.0),
-        response_emotion(intent.action, result),
-    )
+    emotion = response_emotion(intent.action, result)
+    audio_config = config.get("audio", {})
+    output_audio_path = Path(audio_config.get("output_dir", "audio/output")) / f"response-{datetime.now():%Y%m%d-%H%M%S-%f}.wav"
+    print(f"Jarvis: {result}")
+    print("Preparing voice response...")
+    try:
+        saved_output_path = speak(
+            result,
+            voice_config.get("tts_enabled", False),
+            voice_config.get("tts_voice", "David"),
+            voice_config.get("tts_rate", 155),
+            voice_config.get("tts_volume", 1.0),
+            emotion,
+            output_audio_path,
+        )
+    except Exception as error:
+        print(f"Voice output unavailable: {error}")
+        saved_output_path = None
+    try:
+        InteractionDatabase(get_database_url()).record(
+            command,
+            result,
+            intent.action,
+            emotion,
+            str(input_audio_path) if input_audio_path else None,
+            str(saved_output_path) if saved_output_path else None,
+        )
+    except Exception as error:
+        print(f"Database logging unavailable: {error}")
     return result
 
 
@@ -88,14 +122,18 @@ def run_voice_mode(config: dict, duration: int) -> None:
     print("Jarvis voice mode is ready. Speak after the prompt; I will respond when you stop.")
     while True:
         try:
-            audio_path = Path(gettempdir()) / "jarvis-command.wav"
+            input_dir = Path(config.get("audio", {}).get("input_dir", "audio/input"))
+            audio_path = input_dir / f"command-{datetime.now():%Y%m%d-%H%M%S-%f}.wav"
+            print("Converting audio to text...")
             transcript = transcriber.transcribe(record_audio_until_silence(audio_path, duration))
             print(f"You said: {transcript or '[nothing detected]'}")
             if transcript:
-                print(handle_command(transcript, config))
+                handle_command(transcript, config, audio_path)
         except (EOFError, KeyboardInterrupt):
             print()
             return
+        except Exception as error:
+            print(f"Voice command failed: {error}")
 
 
 def main() -> None:
