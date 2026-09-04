@@ -63,6 +63,7 @@ The API is available at `http://127.0.0.1:8000`. Interactive API documentation i
 - Output is captured and exposed through `/api/status`.
 - The frontend polls status approximately once per second.
 - Only one voice-agent process can run at a time.
+- A spoken stop command exits the voice loop; start it again with `POST /api/start` or the frontend Start button.
 - Stopping the API-managed process does not delete recorded audio or database data.
 
 The backend requires the root project dependencies, a working microphone, and the configured PostgreSQL connection for interaction logging. Jarvis continues operating if database logging is unavailable.

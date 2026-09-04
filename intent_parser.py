@@ -69,32 +69,22 @@ class IntentParser:
 
     @staticmethod
     def _parse_locally(transcript: str) -> Intent:
-        if any(phrase in transcript for phrase in ("take a picture", "take a photo", "capture")):
-            return Intent("take_picture", {})
-        if any(phrase in transcript for phrase in ("take a screenshot", "screenshot", "screen capture")):
-            return Intent("take_screenshot", {})
-        if any(phrase in transcript for phrase in ("what time", "tell me the time", "current time")):
-            return Intent("tell_time", {})
-        if any(phrase in transcript for phrase in ("tell me a joke", "give me a joke", "make me laugh", "say a joke")):
-            return Intent("tell_joke", {})
-        if any(phrase in transcript for phrase in ("tell me about you", "who are you", "what are you")):
-            return Intent("about_me", {})
-        if transcript in {"hi", "hello", "hey", "good morning", "good afternoon", "good evening"}:
-            return Intent("greeting", {})
-        if transcript in {"thank you", "thanks", "thank you jarvis", "thanks jarvis"}:
-            return Intent("thanks", {})
-        if any(phrase in transcript for phrase in ("change your voice", "change the voice", "how can i change your voice", "voice settings")):
-            return Intent("voice_help", {})
-        edit_words = ("change", "edit", "modify", "update", "add", "remove", "fix")
-        if any(word in transcript for word in edit_words) and "code" in transcript:
-            return Intent("code_change", {"request": transcript})
-        document_words = ("document", "report", "guide", "notes")
-        if any(word in transcript for word in document_words) and any(word in transcript for word in ("create", "make", "give", "write", "generate")):
-            return Intent("create_document", {"topic": transcript})
-        if "ai tools" in transcript or "artificial intelligence tools" in transcript:
-            return Intent("ai_tools", {})
-        if transcript.startswith(("open video ", "play video ")):
-            return Intent("open_video", {"name": transcript.split(" ", 2)[-1]})
-        if transcript.startswith(("open app ", "launch ", "open ")):
-            return Intent("open_app", {"name": transcript.split(" ", 1)[-1]})
-        return Intent("search_web", {"query": transcript})
+        rules = [
+            (any(phrase in transcript for phrase in ("take a picture", "take a photo", "capture")), Intent("take_picture", {})),
+            (any(phrase in transcript for phrase in ("take a screenshot", "screenshot", "screen capture")), Intent("take_screenshot", {})),
+            (any(phrase in transcript for phrase in ("what time", "tell me the time", "current time")), Intent("tell_time", {})),
+            (any(phrase in transcript for phrase in ("tell me a joke", "give me a joke", "make me laugh", "say a joke")), Intent("tell_joke", {})),
+            (any(phrase in transcript for phrase in ("tell me about you", "who are you", "what are you")), Intent("about_me", {})),
+            (transcript in {"hi", "hello", "hey", "good morning", "good afternoon", "good evening"}, Intent("greeting", {})),
+            (transcript in {"thank you", "thanks", "thank you jarvis", "thanks jarvis"}, Intent("thanks", {})),
+            (any(phrase in transcript for phrase in ("change your voice", "change the voice", "how can i change your voice", "voice settings")), Intent("voice_help", {})),
+            (any(word in transcript for word in ("change", "edit", "modify", "update", "add", "remove", "fix")) and "code" in transcript, Intent("code_change", {"request": transcript})),
+            (any(word in transcript for word in ("document", "report", "guide", "notes")) and any(word in transcript for word in ("create", "make", "give", "write", "generate")), Intent("create_document", {"topic": transcript})),
+            ("ai tools" in transcript or "artificial intelligence tools" in transcript, Intent("ai_tools", {})),
+            (any(phrase in transcript for phrase in ("improve yourself", "improve jarvis", "research improvements", "research public github", "learn from github")), Intent("self_improvement", {"request": transcript})),
+            (transcript in {"start", "start jarvis", "wake up", "begin listening"}, Intent("start_agent", {})),
+            (any(phrase in transcript for phrase in ("stop", "stop jarvis", "stop working", "stop working now", "go to sleep", "shut down")), Intent("stop_agent", {})),
+            (transcript.startswith(("open video ", "play video ")), Intent("open_video", {"name": transcript.split(" ", 2)[-1]})),
+            (transcript.startswith(("open app ", "launch ", "open ")), Intent("open_app", {"name": transcript.split(" ", 1)[-1]})),
+        ]
+        return next((intent for matches, intent in rules if matches), Intent("search_web", {"query": transcript}))
