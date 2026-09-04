@@ -59,6 +59,7 @@ def handle_command(command: str, config: dict, input_audio_path: Path | None = N
         "apps": config.get("apps", {}),
         "pictures_dir": config["media"].get("pictures_dir", "pictures"),
         "documents_dir": config.get("documents_dir", "documents"),
+        "reports_dir": config.get("reports_dir", "documents/research"),
     }
     result = run_intent(intent.__class__(intent.action, parameters))
     voice_config = config["voice"]
@@ -129,6 +130,8 @@ def run_voice_mode(config: dict, duration: int) -> None:
             print(f"You said: {transcript or '[nothing detected]'}")
             if transcript:
                 handle_command(transcript, config, audio_path)
+                if IntentParser().parse(transcript).action == "stop_agent":
+                    return
         except (EOFError, KeyboardInterrupt):
             print()
             return

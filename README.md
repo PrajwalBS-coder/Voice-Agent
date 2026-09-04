@@ -19,6 +19,10 @@ Secrets belong in `.env`. Add your key as `OPENAI_API_KEY=...`; `.env` is exclud
 
 Add a skill module with a `run(parameters)` function, then register it once in `skill_registry.py`. The intent validator, router, and LLM prompt read the same registry automatically; there is no separate `VALID_ACTIONS` list to update.
 
+## Self-improvement research
+
+Say `research improvements for yourself` or `learn from public GitHub repositories`. Jarvis uses the public GitHub API to collect repository metadata, links, and detected licenses, then writes a review report under `documents/research/`. It does not copy source code, execute repository code, or modify the project without a separate confirmed code-change request.
+
 ## Voice mode
 
 With a microphone connected, start push-to-talk voice mode:
@@ -28,6 +32,12 @@ python main.py --voice --duration 5
 ```
 
 Speak when Jarvis says “Listening.” It detects when you stop speaking, then transcribes the command, runs it, and speaks the response. The first use of Whisper downloads the configured model. Press Ctrl+C to exit.
+
+Voice controls:
+
+- Say `stop`, `stop working now`, or `go to sleep` to hear a final response and stop the voice loop.
+- Say `start` while the loop is running to confirm that Jarvis is already listening.
+- To start a fully stopped process again, use the Svelte UI Start button or the backend `POST /api/start` endpoint. A stopped process cannot hear a spoken start command.
 
 ## Start the control UI
 
