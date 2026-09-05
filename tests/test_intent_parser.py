@@ -6,6 +6,8 @@ def test_local_commands_are_classified():
     assert parser.parse("take a photo").action == "take_picture"
     assert parser.parse("tell me the time").action == "tell_time"
     assert parser.parse("open video inception").parameters == {"name": "inception"}
+    assert parser.parse("play song Blinding Lights").parameters == {"query": "Blinding Lights"}
+    assert parser.parse("audio").action == "song_permission"
     assert parser.parse("nonsense please").action == "unknown"
 
 

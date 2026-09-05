@@ -37,6 +37,9 @@ class IntentParser:
         transcript = transcript.strip()
         if not transcript:
             return Intent("unknown", {})
+        music_intent = self._parse_music_request(transcript)
+        if music_intent:
+            return music_intent
         if self.api_key:
             return self._parse_with_openai(transcript)
         return self._parse_locally(transcript.lower())
@@ -55,7 +58,8 @@ class IntentParser:
                     "content": (
                         "Return only JSON with action and parameters. Valid actions are: "
                         f"{', '.join(sorted(available_actions()))}. "
-                        "Use name for open_video/open_app and no parameters for other actions."
+                        "Use name for open_video/open_app, query for search_web/play_song, "
+                        "and no parameters for other actions."
                     ),
                 },
                 {"role": "user", "content": transcript},
@@ -66,6 +70,23 @@ class IntentParser:
             return validate_intent(json.loads(content))
         except (json.JSONDecodeError, TypeError):
             return Intent("unknown", {})
+
+    @staticmethod
+    def _parse_music_request(transcript: str) -> Intent | None:
+        lowered = transcript.lower().strip()
+        if lowered in {"audio", "play audio", "yes, audio", "yes audio"}:
+            return Intent("song_permission", {"media_type": "audio"})
+        if lowered in {"video", "play video", "yes, video", "yes video"}:
+            return Intent("song_permission", {"media_type": "video"})
+        if lowered in {"cancel song", "cancel music", "never mind", "nevermind"}:
+            return Intent("cancel_song", {})
+        prefixes = ("play song ", "play music ", "listen to ", "search for song ", "find song ", "play ")
+        for prefix in prefixes:
+            if lowered.startswith(prefix):
+                song = transcript[len(prefix):].strip()
+                if song and not lowered.startswith(("play video ", "play audio ")):
+                    return Intent("play_song", {"query": song})
+        return None
 
     @staticmethod
     def _parse_locally(transcript: str) -> Intent:

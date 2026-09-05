@@ -10,6 +10,15 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "apps": {},
     "llm": {"model": "gpt-4o-mini", "api_key_env": "OPENAI_API_KEY"},
     "voice": {"stt_model": "base.en", "tts_enabled": False},
+    "audio": {
+        "input_dir": "audio/input",
+        "output_dir": "audio/output",
+        "vad_enabled": False,
+        "vad_threshold": 0.5,
+        "silence_seconds": 1.2,
+        "threshold": 0.015,
+        "pre_roll_seconds": 0.3,
+    },
 }
 
 

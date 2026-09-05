@@ -26,7 +26,7 @@ SKILLS: dict[str, Skill] = {
     "search_web": search_web.run,
 }
 
-SPECIAL_ACTIONS = {"code_change", "unknown"}
+SPECIAL_ACTIONS = {"code_change", "play_song", "song_permission", "cancel_song", "unknown"}
 
 
 def available_actions() -> set[str]:

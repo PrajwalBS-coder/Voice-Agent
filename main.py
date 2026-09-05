@@ -17,12 +17,16 @@ from code_agent import CodeAgent
 from database import InteractionDatabase
 from intent_parser import IntentParser
 from router import run_intent
+from skills.music import MusicSession
 from stt import SpeechToText
 from tts import speak
 
 
+MUSIC_SESSION = MusicSession()
+
+
 def response_emotion(action: str, result: str) -> str:
-    if action in {"take_picture", "take_screenshot", "open_video", "open_app"} and not result.startswith(("I could", "I do not", "The command")):
+    if action in {"take_picture", "take_screenshot", "open_video", "open_app", "song_permission"} and not result.startswith(("I could", "I do not", "The command")):
         return "happy"
     if result.startswith(("I could", "I do not", "The command", "I found no")):
         return "empathetic"
@@ -53,15 +57,22 @@ def handle_command(command: str, config: dict, input_audio_path: Path | None = N
         intent = intent.__class__("search_web", {"query": command})
     if intent.action == "code_change":
         return handle_code_change(command, config)
-    parameters = {
-        **intent.parameters,
-        "videos": config["media"].get("videos", {}),
-        "apps": config.get("apps", {}),
-        "pictures_dir": config["media"].get("pictures_dir", "pictures"),
-        "documents_dir": config.get("documents_dir", "documents"),
-        "reports_dir": config.get("reports_dir", "documents/research"),
-    }
-    result = run_intent(intent.__class__(intent.action, parameters))
+    if intent.action == "play_song":
+        result = MUSIC_SESSION.request(str(intent.parameters.get("query", "")))
+    elif intent.action == "song_permission":
+        result = MUSIC_SESSION.approve(str(intent.parameters.get("media_type", "")))
+    elif intent.action == "cancel_song":
+        result = MUSIC_SESSION.cancel()
+    else:
+        parameters = {
+            **intent.parameters,
+            "videos": config["media"].get("videos", {}),
+            "apps": config.get("apps", {}),
+            "pictures_dir": config["media"].get("pictures_dir", "pictures"),
+            "documents_dir": config.get("documents_dir", "documents"),
+            "reports_dir": config.get("reports_dir", "documents/research"),
+        }
+        result = run_intent(intent.__class__(intent.action, parameters))
     voice_config = config["voice"]
     emotion = response_emotion(intent.action, result)
     audio_config = config.get("audio", {})
@@ -126,7 +137,16 @@ def run_voice_mode(config: dict, duration: int) -> None:
             input_dir = Path(config.get("audio", {}).get("input_dir", "audio/input"))
             audio_path = input_dir / f"command-{datetime.now():%Y%m%d-%H%M%S-%f}.wav"
             print("Converting audio to text...")
-            transcript = transcriber.transcribe(record_audio_until_silence(audio_path, duration))
+            audio_config = config.get("audio", {})
+            transcript = transcriber.transcribe(record_audio_until_silence(
+                audio_path,
+                duration,
+                silence_seconds=audio_config.get("silence_seconds", 1.2),
+                threshold=audio_config.get("threshold", 0.015),
+                vad_enabled=audio_config.get("vad_enabled", False),
+                vad_threshold=audio_config.get("vad_threshold", 0.5),
+                pre_roll_seconds=audio_config.get("pre_roll_seconds", 0.3),
+            ))
             print(f"You said: {transcript or '[nothing detected]'}")
             if transcript:
                 handle_command(transcript, config, audio_path)

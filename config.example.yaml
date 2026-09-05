@@ -17,3 +17,13 @@ voice:
   tts_rate: 155
   tts_volume: 1.0
   default_emotion: "calm"
+audio:
+  input_dir: "audio/input"
+  output_dir: "audio/output"
+  # Enable local Silero VAD for more reliable end-of-speech detection.
+  vad_enabled: false
+  vad_threshold: 0.5
+  silence_seconds: 1.2
+  # Used only when VAD is disabled.
+  threshold: 0.015
+  pre_roll_seconds: 0.3

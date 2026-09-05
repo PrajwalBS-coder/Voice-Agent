@@ -9,6 +9,19 @@ from urllib.parse import quote_plus
 from urllib.request import Request, urlopen
 
 USER_AGENT = "Jarvis-lite/1.0"
+QUESTION_PREFIXES = (
+    "can you tell me about ",
+    "could you tell me about ",
+    "i want to know about ",
+    "i would like to know about ",
+    "i have asked about ",
+    "i've asked about ",
+    "i asked about ",
+    "tell me about ",
+    "who is ",
+    "what is ",
+    "what are ",
+)
 
 
 class _ResultParser(HTMLParser):
@@ -36,14 +49,19 @@ class _ResultParser(HTMLParser):
             self._in_result = False
 
 
+def _search_subject(query: str) -> str:
+    """Remove conversational wording that lowers web-search recall."""
+    cleaned = query.strip(" .?!")
+    lowered = cleaned.lower()
+    for prefix in QUESTION_PREFIXES:
+        if lowered.startswith(prefix):
+            return cleaned[len(prefix):].strip(" .?!")
+    return cleaned
+
+
 def _wikipedia_summary(query: str) -> str | None:
-    prefixes = ("tell me about ", "who is ", "what is ", "what are ")
-    subject = query.lower()
-    for prefix in prefixes:
-        if subject.startswith(prefix):
-            subject = query[len(prefix):].strip(" .?!")
-            break
-    if subject == query.lower():
+    subject = _search_subject(query)
+    if subject.casefold() == query.strip(" .?!").casefold():
         return None
     subjects = [subject]
     if subject.startswith("the "):
@@ -71,6 +89,7 @@ def run(parameters: dict[str, Any]) -> str:
     query = str(parameters.get("query", "")).strip()
     if not query:
         return "What would you like me to search for?"
+    search_query = _search_subject(query)
     try:
         summary = _wikipedia_summary(query)
         if summary:
@@ -79,7 +98,7 @@ def run(parameters: dict[str, Any]) -> str:
         pass
     try:
         api_request = Request(
-            f"https://api.duckduckgo.com/?q={quote_plus(query)}&format=json&no_html=1",
+            f"https://api.duckduckgo.com/?q={quote_plus(search_query)}&format=json&no_html=1",
             headers={"User-Agent": USER_AGENT},
         )
         with urlopen(api_request, timeout=10) as response:
@@ -98,7 +117,7 @@ def run(parameters: dict[str, Any]) -> str:
         pass
     try:
         request = Request(
-            f"https://html.duckduckgo.com/html/?q={quote_plus(query)}",
+            f"https://html.duckduckgo.com/html/?q={quote_plus(search_query)}",
             headers={"User-Agent": USER_AGENT},
         )
         with urlopen(request, timeout=10) as response:
@@ -107,6 +126,6 @@ def run(parameters: dict[str, Any]) -> str:
     except Exception:
         return "I could not reach the web right now."
     if not parser.results:
-        return f"I found no results for {query}."
+        return f"I found no results for {search_query}."
     results = "; ".join(parser.results[:3])
-    return f"Here are the top results for {query}: {results}."
+    return f"Here are the top results for {search_query}: {results}."
