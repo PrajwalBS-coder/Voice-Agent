@@ -33,11 +33,20 @@ python main.py --voice --duration 5
 
 Speak when Jarvis says “Listening.” It detects when you stop speaking, then transcribes the command, runs it, and speaks the response. The first use of Whisper downloads the configured model. Press Ctrl+C to exit.
 
+For more reliable end-of-speech detection in noisy rooms, set `audio.vad_enabled: true` in `config.yaml` after installing the updated requirements. The default remains the previous lightweight volume-threshold detector, so voice behaviour does not change until you opt in.
+
 Voice controls:
 
 - Say `stop`, `stop working now`, or `go to sleep` to hear a final response and stop the voice loop.
 - Say `start` while the loop is running to confirm that Jarvis is already listening.
 - To start a fully stopped process again, use the Svelte UI Start button or the backend `POST /api/start` endpoint. A stopped process cannot hear a spoken start command.
+
+## Music search and playback
+
+Say `play song <title>` (or `listen to <title>`). Jarvis asks whether you want
+audio or video results before it opens a YouTube search in your browser. Reply
+`audio` or `video` to grant permission, or say `cancel song` to discard the
+request. It does not download music or start playback without that confirmation.
 
 ## Start the control UI
 

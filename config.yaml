@@ -19,3 +19,8 @@ database:
 audio:
   input_dir: "audio/input"
   output_dir: "audio/output"
+  vad_enabled: false
+  vad_threshold: 0.5
+  silence_seconds: 1.2
+  threshold: 0.015
+  pre_roll_seconds: 0.3
