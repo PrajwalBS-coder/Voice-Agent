@@ -15,7 +15,10 @@ voice:
   tts_volume: 1.0
   default_emotion: "calm"
 database:
-  path: "postgresql"
+  url: "sqlite:///data/jarvis-memory.db"
+memory:
+  enabled: true
+  recent_turns: 6
 audio:
   input_dir: "audio/input"
   output_dir: "audio/output"

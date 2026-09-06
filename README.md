@@ -23,6 +23,16 @@ Add a skill module with a `run(parameters)` function, then register it once in `
 
 Say `research improvements for yourself` or `learn from public GitHub repositories`. Jarvis uses the public GitHub API to collect repository metadata, links, and detected licenses, then writes a review report under `documents/research/`. It does not copy source code, execute repository code, or modify the project without a separate confirmed code-change request.
 
+## Conversation memory
+
+Jarvis stores each interaction locally in `data/jarvis-memory.db` by default and
+uses the latest six turns as context for the configured LLM. This lets it resolve
+follow-up references such as “when was she born?” after an earlier question.
+To disable memory, set `memory.enabled: false` in `config.yaml`. When an OpenAI
+key is configured, the selected recent turns are sent with the current request;
+without one, interactions are still stored locally but the offline parser does
+not use them to answer free-form follow-up questions.
+
 ## Voice mode
 
 With a microphone connected, start push-to-talk voice mode:

@@ -10,6 +10,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "apps": {},
     "llm": {"model": "gpt-4o-mini", "api_key_env": "OPENAI_API_KEY"},
     "voice": {"stt_model": "base.en", "tts_enabled": False},
+    "database": {"url": "sqlite:///data/jarvis-memory.db"},
+    "memory": {"enabled": True, "recent_turns": 6},
     "audio": {
         "input_dir": "audio/input",
         "output_dir": "audio/output",

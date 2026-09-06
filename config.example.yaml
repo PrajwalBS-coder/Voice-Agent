@@ -10,6 +10,13 @@ llm:
   api_key_env: "OPENAI_API_KEY"
 coding:
   model: "qwen2.5-coder:7b"
+database:
+  # SQLite works locally with no separate server. PostgreSQL URLs are also supported.
+  url: "sqlite:///data/jarvis-memory.db"
+memory:
+  # Recent turns are supplied to the configured LLM for context-aware replies.
+  enabled: true
+  recent_turns: 6
 voice:
   stt_model: "base.en"
   tts_enabled: false

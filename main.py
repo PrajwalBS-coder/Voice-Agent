@@ -35,9 +35,12 @@ def response_emotion(action: str, result: str) -> str:
     return "calm"
 
 
-def get_database_url() -> str:
+def get_database_url(config: dict) -> str:
     import os
 
+    configured_url = config.get("database", {}).get("url")
+    if configured_url:
+        return str(configured_url)
     return "postgresql://{user}:{password}@{host}:{port}/{name}".format(
         user=os.environ["DB_USER"],
         password=os.environ["DB_PASSWORD"],
@@ -47,12 +50,24 @@ def get_database_url() -> str:
     )
 
 
+def load_conversation_memory(config: dict) -> list[dict]:
+    memory_config = config.get("memory", {})
+    if not memory_config.get("enabled", True):
+        return []
+    try:
+        database = InteractionDatabase(get_database_url(config))
+        return database.recent_interactions(memory_config.get("recent_turns", 6))
+    except Exception as error:
+        print(f"Memory unavailable: {error}")
+        return []
+
+
 def handle_command(command: str, config: dict, input_audio_path: Path | None = None) -> str:
     llm_config = config["llm"]
     intent = IntentParser(
         model=llm_config["model"],
         api_key_env=llm_config["api_key_env"],
-    ).parse(command)
+    ).parse(command, load_conversation_memory(config))
     if intent.action == "unknown":
         intent = intent.__class__("search_web", {"query": command})
     if intent.action == "code_change":
@@ -93,7 +108,7 @@ def handle_command(command: str, config: dict, input_audio_path: Path | None = N
         print(f"Voice output unavailable: {error}")
         saved_output_path = None
     try:
-        InteractionDatabase(get_database_url()).record(
+        InteractionDatabase(get_database_url(config)).record(
             command,
             result,
             intent.action,
