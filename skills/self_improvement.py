@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from urllib.parse import quote_plus
 from urllib.request import Request, urlopen
 
 USER_AGENT = "Jarvis-lite/1.0"
+logger = logging.getLogger(__name__)
 SEARCH_TERMS = {
     "voice": "python voice activity detection speech assistant",
     "wake word": "python wake word detection open source",
@@ -55,8 +57,9 @@ def run(parameters: dict[str, Any]) -> str:
     topic, search_term = _topic_for_request(request)
     try:
         repositories = _search_repositories(search_term)
-    except Exception as error:
-        return f"I could not research public repositories right now: {error}"
+    except Exception:
+        logger.exception("Public repository research failed")
+        return "I could not research public repositories right now."
     if not repositories:
         return f"I found no public repositories for {topic}."
 

@@ -48,7 +48,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` in a browser. The frontend expects the backend at `http://127.0.0.1:8000`.
+Open `http://localhost:5173` in a browser. During development, Vite proxies `/api` requests to `http://127.0.0.1:8000`, avoiding browser CORS issues. Set `VITE_API_URL` when the frontend must call a different backend directly.
 
 ## Build for production
 

@@ -1,7 +1,11 @@
 """Route validated intents to skills."""
 
+import logging
+
 from intent_parser import Intent
 from skill_registry import SKILLS
+
+logger = logging.getLogger(__name__)
 
 
 def run_intent(intent: Intent) -> str:
@@ -11,4 +15,5 @@ def run_intent(intent: Intent) -> str:
     try:
         return skill(intent.parameters)
     except Exception as error:
-        return f"The command failed: {error}"
+        logger.exception("Skill %s failed", intent.action)
+        return "The command failed. Please try again."

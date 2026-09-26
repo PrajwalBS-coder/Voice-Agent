@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from config import load_config
 from code_agent import CodeAgent
 from database import InteractionDatabase
-from intent_parser import IntentParser
+from intent_parser import Intent, IntentParser
 from router import run_intent
 from skills.music import MusicSession
 from stt import SpeechToText
@@ -62,12 +62,19 @@ def load_conversation_memory(config: dict) -> list[dict]:
         return []
 
 
-def handle_command(command: str, config: dict, input_audio_path: Path | None = None) -> str:
-    llm_config = config["llm"]
-    intent = IntentParser(
-        model=llm_config["model"],
-        api_key_env=llm_config["api_key_env"],
-    ).parse(command, load_conversation_memory(config))
+def handle_command(
+    command: str,
+    config: dict,
+    input_audio_path: Path | None = None,
+    parsed_intent: Intent | None = None,
+) -> str:
+    if parsed_intent is None:
+        llm_config = config["llm"]
+        parsed_intent = IntentParser(
+            model=llm_config["model"],
+            api_key_env=llm_config["api_key_env"],
+        ).parse(command, load_conversation_memory(config))
+    intent = parsed_intent
     if intent.action == "unknown":
         intent = intent.__class__("search_web", {"query": command})
     if intent.action == "code_change":
@@ -146,6 +153,11 @@ def run_voice_mode(config: dict, duration: int) -> None:
     from audio import record_audio_until_silence
 
     transcriber = SpeechToText(config["voice"].get("stt_model", "base.en"))
+    llm_config = config["llm"]
+    intent_parser = IntentParser(
+        model=llm_config["model"],
+        api_key_env=llm_config["api_key_env"],
+    )
     print("Jarvis voice mode is ready. Speak after the prompt; I will respond when you stop.")
     while True:
         try:
@@ -164,8 +176,9 @@ def run_voice_mode(config: dict, duration: int) -> None:
             ))
             print(f"You said: {transcript or '[nothing detected]'}")
             if transcript:
-                handle_command(transcript, config, audio_path)
-                if IntentParser().parse(transcript).action == "stop_agent":
+                intent = intent_parser.parse(transcript, load_conversation_memory(config))
+                handle_command(transcript, config, audio_path, intent)
+                if intent.action == "stop_agent":
                     return
         except (EOFError, KeyboardInterrupt):
             print()

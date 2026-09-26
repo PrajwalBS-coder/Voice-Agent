@@ -1,4 +1,5 @@
 import os
+import shlex
 import subprocess
 import webbrowser
 from typing import Any
@@ -12,8 +13,9 @@ def run(parameters: dict[str, Any]) -> str:
         return f"I do not have an app named {name or 'that'} configured."
     if str(command).startswith(("http://", "https://")):
         webbrowser.open(str(command))
-    elif os.name == "nt":
-        subprocess.Popen(str(command), shell=True)
     else:
-        subprocess.Popen(str(command).split())
+        arguments = command if isinstance(command, list) else shlex.split(str(command), posix=os.name != "nt")
+        if not arguments:
+            return f"I do not have an app named {name or 'that'} configured."
+        subprocess.Popen([str(argument) for argument in arguments], shell=False)
     return f"Opening {name}."

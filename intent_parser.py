@@ -118,4 +118,4 @@ class IntentParser:
             (transcript.startswith(("open video ", "play video ")), Intent("open_video", {"name": transcript.split(" ", 2)[-1]})),
             (transcript.startswith(("open app ", "launch ", "open ")), Intent("open_app", {"name": transcript.split(" ", 1)[-1]})),
         ]
-        return next((intent for matches, intent in rules if matches), Intent("search_web", {"query": transcript}))
+        return next((intent for matches, intent in rules if matches), Intent("unknown", {}))

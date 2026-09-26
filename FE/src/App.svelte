@@ -6,6 +6,9 @@
   let duration = 15;
   let notice = '';
   let loading = false;
+  let polling = true;
+
+  const POLL_INTERVAL_MS = 3000;
 
   async function refreshStatus() {
     try {
@@ -30,9 +33,17 @@
   }
 
   onMount(() => {
-    refreshStatus();
-    const interval = setInterval(refreshStatus, 1000);
-    return () => clearInterval(interval);
+    async function pollStatus() {
+      while (polling) {
+        await refreshStatus();
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      }
+    }
+
+    pollStatus();
+    return () => {
+      polling = false;
+    };
   });
 
   $: stateLabel = status.state.charAt(0).toUpperCase() + status.state.slice(1);

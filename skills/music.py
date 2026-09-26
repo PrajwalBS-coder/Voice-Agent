@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import webbrowser
+import logging
 from dataclasses import dataclass
 from urllib.parse import urlencode
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -34,8 +37,9 @@ class MusicSession:
         url = f"https://www.youtube.com/results?{urlencode({'search_query': query})}"
         try:
             webbrowser.open(url)
-        except Exception as error:
-            return f"I could not open {media_type} results for {song}: {error}"
+        except Exception:
+            logger.exception("Could not open %s results for song", media_type)
+            return f"I could not open {media_type} results for {song}."
         return f"Opening {media_type} results for {song} on YouTube."
 
     def cancel(self) -> str:
