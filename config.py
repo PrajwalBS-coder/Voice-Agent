@@ -8,8 +8,15 @@ import yaml
 DEFAULT_CONFIG: dict[str, Any] = {
     "media": {"videos": {}, "pictures_dir": "pictures"},
     "apps": {},
-    "llm": {"model": "gpt-4o-mini", "api_key_env": "OPENAI_API_KEY"},
-    "voice": {"stt_model": "base.en", "tts_enabled": False},
+    "llm": {"provider": "auto", "model": "gemini-3.8-flash", "api_key_env": ""},
+    "voice": {
+        "stt_model": "base.en",
+        "stt_language": "en",
+        "stt_beam_size": 5,
+        "stt_vad_filter": False,
+        "tts_enabled": False,
+        "tts_voice": "Charon",
+    },
     "database": {"url": "sqlite:///data/jarvis-memory.db"},
     "memory": {"enabled": True, "recent_turns": 6},
     "audio": {
@@ -17,9 +24,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "output_dir": "audio/output",
         "vad_enabled": False,
         "vad_threshold": 0.5,
-        "silence_seconds": 1.2,
-        "threshold": 0.015,
-        "pre_roll_seconds": 0.3,
+        "silence_seconds": 1.5,
+        "threshold": 0.008,
+        "pre_roll_seconds": 0.5,
+        "min_speech_seconds": 0.25,
     },
 }
 

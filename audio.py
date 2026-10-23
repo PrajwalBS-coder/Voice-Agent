@@ -4,6 +4,10 @@ from collections import deque
 from pathlib import Path
 
 
+class NoSpeechDetected(RuntimeError):
+    """Raised when the selected microphone captured no usable speech."""
+
+
 class _RmsSpeechDetector:
     """Compatibility detector used when neural VAD is disabled."""
 
@@ -48,6 +52,7 @@ def record_audio_until_silence(
     vad_enabled: bool = False,
     vad_threshold: float = 0.5,
     pre_roll_seconds: float = 0.3,
+    min_speech_seconds: float = 0.25,
 ) -> Path:
     """Record one utterance, ending after sustained silence.
 
@@ -70,30 +75,42 @@ def record_audio_until_silence(
     required_silent_blocks = max(1, int(silence_seconds * sample_rate / block_size))
     maximum_blocks = int(max_duration * sample_rate / block_size)
     detector = _SileroSpeechDetector(vad_threshold) if vad_enabled else _RmsSpeechDetector(threshold)
-    print("Listening...")
+    try:
+        device_index = sd.default.device[0]
+        device = sd.query_devices(device_index, "input")
+        device_name = device.get("name", "default microphone")
+    except Exception:
+        device_index = "default"
+        device_name = "system default microphone"
+    print(f"Listening on input {device_index}: {device_name}. Speak now; recording stops after silence.")
+    speech_blocks = 0
+    required_speech_blocks = max(1, int(min_speech_seconds * sample_rate / block_size))
     with sd.InputStream(samplerate=sample_rate, channels=1, dtype="float32", blocksize=block_size) as stream:
         for _ in range(maximum_blocks):
             block, _ = stream.read(block_size)
             block = np.asarray(block).copy()
             is_speech = detector.is_speech(block, sample_rate)
             if not speech_started:
-                if vad_enabled:
-                    pre_roll.append(block)
-                else:
-                    blocks.append(block)
+                pre_roll.append(block)
                 if is_speech:
-                    if vad_enabled:
-                        blocks.extend(pre_roll)
+                    blocks.extend(pre_roll)
                     speech_started = True
                     silent_blocks = 0
+                    speech_blocks = 1
             else:
                 blocks.append(block)
                 if is_speech:
                     silent_blocks = 0
+                    speech_blocks += 1
                 else:
                     silent_blocks += 1
                     if silent_blocks >= required_silent_blocks:
                         break
-    recording = np.concatenate(blocks, axis=0) if blocks else np.zeros((1, 1), dtype="float32")
+    if not speech_started or speech_blocks < required_speech_blocks:
+        raise NoSpeechDetected(
+            f"No speech detected from {device_name}. Check the selected input device, microphone permission, and input level."
+        )
+    recording = np.concatenate(blocks, axis=0)
     sf.write(path, recording, sample_rate)
+    print(f"Captured {len(recording) / sample_rate:.1f}s from input {device_index} to {path}.")
     return path

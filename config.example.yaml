@@ -6,8 +6,10 @@ apps:
   browser: "https://www.google.com"
   notepad: "notepad.exe"
 llm:
-  model: "gpt-4o-mini"
-  api_key_env: "OPENAI_API_KEY"
+  provider: "auto"
+  model: "gemini-3.8-flash"
+  # Leave empty for automatic GEMINI_API_KEY / OPENAI_API_KEY selection.
+  api_key_env: ""
 coding:
   model: "qwen2.5-coder:7b"
 database:
@@ -19,8 +21,13 @@ memory:
   recent_turns: 6
 voice:
   stt_model: "base.en"
+  stt_language: "en"
+  stt_beam_size: 5
+  # Recording already detects speech; keep this false to avoid dropping short words twice.
+  stt_vad_filter: false
   tts_enabled: false
-  tts_voice: "David"
+  startup_greeting: true
+  tts_voice: "Charon"
   tts_rate: 155
   tts_volume: 1.0
   default_emotion: "calm"
@@ -30,7 +37,8 @@ audio:
   # Enable local Silero VAD for more reliable end-of-speech detection.
   vad_enabled: false
   vad_threshold: 0.5
-  silence_seconds: 1.2
+  silence_seconds: 1.5
   # Used only when VAD is disabled.
-  threshold: 0.015
-  pre_roll_seconds: 0.3
+  threshold: 0.008
+  pre_roll_seconds: 0.5
+  min_speech_seconds: 0.25

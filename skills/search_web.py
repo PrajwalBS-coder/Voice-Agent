@@ -89,6 +89,36 @@ def run(parameters: dict[str, Any]) -> str:
     query = str(parameters.get("query", "")).strip()
     if not query:
         return "What would you like me to search for?"
+    provider = str(parameters.get("llm_provider", "auto")).lower()
+    api_key_env = str(parameters.get("api_key_env", "") or "")
+    if provider == "gemini" or (
+        provider == "auto" and (api_key_env.upper().startswith("GEMINI") or not api_key_env)
+    ):
+        import os
+
+        key = os.getenv(api_key_env or "GEMINI_API_KEY")
+        if key:
+            try:
+                from google import genai
+
+                response = genai.Client(api_key=key).models.generate_content(
+                    model=str(parameters.get("llm_model", "gemini-3.8-flash")),
+                    contents=query,
+                    config={
+                        "system_instruction": (
+                            "Answer the user's question in a concise, natural spoken style. "
+                            "Use Google Search results for current or factual claims. If the sources do not support "
+                            "an answer, say what is uncertain instead of guessing. Do not read URLs aloud."
+                        ),
+                        "tools": [{"google_search": {}}],
+                        "temperature": 0.2,
+                    },
+                )
+                answer = (response.text or "").strip()
+                if answer:
+                    return answer
+            except Exception as error:
+                print(f"Gemini Search is temporarily unavailable; falling back to web search: {error}")
     search_query = _search_subject(query)
     try:
         summary = _wikipedia_summary(query)

@@ -1,3 +1,5 @@
+import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -244,23 +246,90 @@ Learn Python, NumPy, pandas, scikit-learn, probability, statistics, linear algeb
 """
 
 
+def _safe_filename(topic: str) -> str:
+    filename = re.sub(r"[^a-z0-9]+", "-", topic.lower()).strip("-")
+    return (filename or "untitled-document")[:80] + ".md"
+
+
+def _offline_document(topic: str) -> str:
+    return f"""# {topic.title()}
+
+## Overview
+
+This document introduces **{topic}** and provides a starting point for further study.
+
+## Key ideas
+
+- Define the main purpose and scope of {topic}.
+- Identify its important concepts, terminology, and practical uses.
+- Compare common approaches and note their strengths and limitations.
+
+## Practical considerations
+
+When working with {topic}, begin with a small example, verify assumptions, and consult
+reliable sources for current or specialized information.
+
+## Suggested next steps
+
+1. Learn the core terminology.
+2. Study a beginner-friendly example.
+3. Build or analyze a small practical project.
+4. Review authoritative references and recent developments.
+
+> This is an offline starter draft. Configure an LLM API key to generate a more detailed document.
+"""
+
+
+def _llm_document(topic: str, model: str, api_key_env: str) -> str | None:
+    api_key = os.getenv(api_key_env)
+    if not api_key:
+        return None
+    from openai import OpenAI
+
+    response = OpenAI(api_key=api_key).chat.completions.create(
+        model=model,
+        temperature=0.3,
+        messages=[
+            {
+                "role": "system",
+                "content": "Write a clear, accurate Markdown document for a general reader. Use a title, overview, key concepts, practical examples, and next steps. Do not invent sources or claim current facts without qualification.",
+            },
+            {"role": "user", "content": f"Create a document about: {topic}"},
+        ],
+    )
+    content = response.choices[0].message.content
+    return content.strip() if content else None
+
+
 def run(parameters: dict[str, Any]) -> str:
     output_dir = Path(parameters.get("documents_dir", "documents")).expanduser()
     output_dir.mkdir(parents=True, exist_ok=True)
-    topic = str(parameters.get("topic", "")).lower()
-    if "javascript" in topic or "java script" in topic:
+    topic = str(parameters.get("topic", "")).strip()
+    normalized_topic = topic.lower()
+    if "javascript" in normalized_topic or "java script" in normalized_topic:
         output_path = output_dir / "javascript-programming-guide.md"
         content = JAVASCRIPT_GUIDE
         subject = "JavaScript"
-    elif "java" in topic:
+    elif "java" in normalized_topic:
         output_path = output_dir / "java-programming-guide.md"
         content = JAVA_GUIDE
         subject = "Java"
-    elif "machine learning" in topic or "ml topics" in topic or topic.endswith(" ml"):
+    elif "machine learning" in normalized_topic or "ml topics" in normalized_topic or normalized_topic.endswith(" ml"):
         output_path = output_dir / "machine-learning-topics.md"
         content = ML_GUIDE
         subject = "machine learning"
     else:
-        return f"I can create a document about a specific topic, but I do not have a template for {topic or 'that topic'} yet."
+        if not topic:
+            return "What topic should I write the document about?"
+        output_path = output_dir / _safe_filename(topic)
+        try:
+            content = _llm_document(
+                topic,
+                str(parameters.get("llm_model", "gpt-4o-mini")),
+                str(parameters.get("api_key_env", "OPENAI_API_KEY")),
+            ) or _offline_document(topic)
+        except Exception:
+            content = _offline_document(topic)
+        subject = topic
     output_path.write_text(content, encoding="utf-8")
-    return f"I created a {subject} programming document at {output_path}."
+    return f"I created a document about {subject} at {output_path}."
