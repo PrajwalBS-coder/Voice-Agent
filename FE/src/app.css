@@ -105,20 +105,13 @@ button:focus-visible, input:focus-visible { outline: 1px solid #51dcc5; outline-
 .inspector { display: flex; flex-direction: column; padding: 0 15px 13px; border-left: 1px solid #1b2029; }
 .inspector-top { display: flex; flex: 0 0 54px; align-items: center; justify-content: space-between; color: #7e8997; font: 8px var(--mono); letter-spacing: .9px; }
 .inspector-top button { width: 24px; height: 21px; border: 0; background: transparent; font-size: 18px; }
-.reactor { position: relative; display: grid; width: 172px; height: 172px; place-items: center; align-self: center; margin: 4px auto 2px; }
-.reactor-ring { position: absolute; border-radius: 50%; }
-.ring-one { inset: 5px; border: 1px solid #243b49; box-shadow: 0 0 22px #238aa31a; }
-.ring-two { inset: 13px; border: 1px dashed #2d6972; opacity: .75; animation: rotate 28s linear infinite; }
-.ring-three { inset: 22px; border: 1px solid #17303d; box-shadow: inset 0 0 12px #39d5ca12; }
-.reactor-core { display: flex; width: 102px; height: 102px; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #244959; border-radius: 50%; background: radial-gradient(circle, #10232a, #0b1118 68%); box-shadow: inset 0 0 24px #3cd9ce12, 0 0 20px #30a9bd14; }
-.core-star { margin-bottom: 4px; color: #69e6dc; font-size: 18px; text-shadow: 0 0 11px #69e6dc; }
+.reactor { position: relative; display: grid; width: 190px; height: 190px; place-items: center; align-self: center; margin: 4px auto 2px; isolation: isolate; }
+.reactor-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.reactor-core { position: relative; display: flex; width: 82px; height: 82px; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #ff762b55; border-radius: 50%; background: radial-gradient(circle, #1b100aee 0, #0b0b0cdd 69%, #090a0d88); box-shadow: inset 0 0 24px #ff681a22, 0 0 27px #ff5b1929; }
+.core-star { margin-bottom: 4px; color: #ffac4c; font-size: 18px; text-shadow: 0 0 11px #ff641d, 0 0 24px #ff3a0a; }
 .reactor-core strong { color: #c7dbe7; font: 8px var(--mono); letter-spacing: 1.35px; }
-.reactor-core small { margin-top: 6px; color: #62cbbd; font: 7px var(--mono); letter-spacing: 1px; }
-.reactor-tick { position: absolute; width: 2px; height: 6px; border-radius: 2px; background: #38c6ce; box-shadow: 0 0 5px #38c6ce; }
-.tick-a { top: 0; left: 50%; }.tick-b { right: 7px; top: 50%; transform: rotate(90deg); }.tick-c { bottom: 8px; left: 27px; transform: rotate(-45deg); }
-.reactor.active .ring-one { border-color: #28656a; box-shadow: 0 0 26px #24d8cb22; }
-.reactor.active .ring-two { border-color: #46d4c1; animation-duration: 10s; }
-.reactor.active .reactor-core { box-shadow: inset 0 0 26px #3cd9ce26, 0 0 25px #30c9bd27; }
+.reactor-core small { margin-top: 6px; color: #ff9a49; font: 7px var(--mono); letter-spacing: 1px; }
+.reactor.active .reactor-core { border-color: #ff8d3c88; box-shadow: inset 0 0 30px #ff681a33, 0 0 35px #ff521c44; }
 .status-summary { display: flex; align-items: flex-start; gap: 9px; padding: 11px 2px 14px; border-bottom: 1px solid #1a212b; }
 .status-indicator { flex: 0 0 auto; width: 6px; height: 6px; margin-top: 4px; border-radius: 50%; background: #db9b51; }
 .status-indicator.ready { background: #55ddb9; box-shadow: 0 0 8px #55ddb977; }
@@ -150,16 +143,14 @@ button:focus-visible, input:focus-visible { outline: 1px solid #51dcc5; outline-
   .dashboard { grid-template-columns: 245px minmax(500px, 1fr) 275px; }
   .sidebar { padding-right: 17px; padding-left: 17px; }
   .inspector { padding-right: 18px; padding-left: 18px; }
-  .reactor { width: 195px; height: 195px; }
-  .reactor-core { width: 116px; height: 116px; }
+  .reactor { width: 210px; height: 210px; }
 }
 
 @media (max-width: 1050px) {
   .dashboard { grid-template-columns: 200px minmax(350px, 1fr) 220px; }
   .sidebar { padding-right: 12px; padding-left: 12px; }
   .inspector { padding-right: 12px; padding-left: 12px; }
-  .reactor { width: 148px; height: 148px; }
-  .reactor-core { width: 88px; height: 88px; }
+  .reactor { width: 164px; height: 164px; }
   .core-star { font-size: 15px; }
 }
 

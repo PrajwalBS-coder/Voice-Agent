@@ -8,6 +8,7 @@
   let loading = false;
   let polling = true;
   let graphCanvas;
+  let reactorCanvas;
   let networkNodes = [];
   let selectedModule = 'router';
   let selectedNodeKey = 'router-hub';
@@ -328,9 +329,91 @@
     return () => cancelAnimationFrame(animationFrame);
   }
 
+  function drawReactor() {
+    const canvas = reactorCanvas;
+    if (!canvas) return () => {};
+    const context = canvas.getContext('2d');
+    let animationFrame = 0;
+    let tick = 0;
+    let width = 0;
+    let height = 0;
+    let pixelRatio = 1;
+    let seed = 92017;
+    const random = () => {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    };
+    const sparks = Array.from({ length: 230 }, () => ({
+      angle: random() * Math.PI * 2,
+      radius: 0.66 + random() * 0.3,
+      size: 0.35 + random() * 1.25,
+      speed: 0.001 + random() * 0.005,
+      phase: random() * Math.PI * 2,
+      tint: random(),
+    }));
+
+    const render = () => {
+      const bounds = canvas.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) {
+        animationFrame = requestAnimationFrame(render);
+        return;
+      }
+      const nextRatio = Math.min(window.devicePixelRatio || 1, 2);
+      if (width !== bounds.width || height !== bounds.height || pixelRatio !== nextRatio) {
+        width = bounds.width;
+        height = bounds.height;
+        pixelRatio = nextRatio;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+      }
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      context.clearRect(0, 0, width, height);
+      context.globalCompositeOperation = 'lighter';
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = Math.min(width, height) * 0.37;
+      const activity = status.running ? 1 : 0.62;
+
+      const glow = context.createRadialGradient(centerX, centerY, radius * 0.12, centerX, centerY, radius * 1.22);
+      glow.addColorStop(0, `rgba(255, 87, 16, ${0.19 * activity})`);
+      glow.addColorStop(0.46, `rgba(255, 105, 18, ${0.12 * activity})`);
+      glow.addColorStop(1, 'rgba(255, 70, 8, 0)');
+      context.fillStyle = glow;
+      context.beginPath(); context.arc(centerX, centerY, radius * 1.22, 0, Math.PI * 2); context.fill();
+
+      for (let band = 0; band < 5; band += 1) {
+        const bandRadius = radius * (0.69 + band * 0.073);
+        context.beginPath();
+        context.ellipse(centerX, centerY, bandRadius, bandRadius * (0.91 + band * 0.012), tick * 0.0013 * (band % 2 ? -1 : 1) + band * 0.34, band * 0.83, Math.PI * (1.43 + (band % 2) * 0.24));
+        context.strokeStyle = `rgba(255, ${91 + band * 17}, ${19 + band * 4}, ${0.13 + activity * 0.13})`;
+        context.lineWidth = band % 2 ? 0.7 : 1.1;
+        context.shadowColor = '#ff6519'; context.shadowBlur = 8; context.stroke(); context.shadowBlur = 0;
+      }
+
+      sparks.forEach((spark) => {
+        const angle = spark.angle + tick * spark.speed * activity;
+        const pulse = Math.sin(tick * 0.045 + spark.phase);
+        const distance = radius * (spark.radius + pulse * 0.025);
+        const x = centerX + Math.cos(angle) * distance;
+        const y = centerY + Math.sin(angle) * distance * 0.96;
+        const alpha = (0.24 + (pulse + 1) * 0.3) * activity;
+        context.beginPath(); context.arc(x, y, spark.size * (0.72 + (pulse + 1) * 0.24), 0, Math.PI * 2);
+        context.fillStyle = spark.tint > 0.78 ? `rgba(255, 205, 91, ${alpha})` : `rgba(255, ${89 + spark.tint * 90}, 27, ${alpha})`;
+        context.shadowColor = '#ff681a'; context.shadowBlur = spark.size * 5; context.fill();
+      });
+      context.shadowBlur = 0;
+      context.globalCompositeOperation = 'source-over';
+      tick += 1;
+      animationFrame = requestAnimationFrame(render);
+    };
+    animationFrame = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animationFrame);
+  }
+
   onMount(() => {
     networkNodes = buildNetwork();
     const stopDrawing = drawNetwork();
+    const stopReactor = drawReactor();
     async function pollStatus() {
       while (polling) {
         await refreshStatus();
@@ -341,6 +424,7 @@
     return () => {
       polling = false;
       stopDrawing();
+      stopReactor();
     };
   });
 </script>
@@ -422,9 +506,8 @@
   <aside class="inspector">
     <div class="inspector-top"><span>AGENT TELEMETRY</span><button aria-label="More telemetry options">···</button></div>
     <div class:active={status.running} class="reactor">
-      <div class="reactor-ring ring-one"></div><div class="reactor-ring ring-two"></div><div class="reactor-ring ring-three"></div>
+      <canvas bind:this={reactorCanvas} class="reactor-canvas" aria-hidden="true"></canvas>
       <div class="reactor-core"><span class="core-star">✳</span><strong>J.A.R.V.I.S.</strong><small>{stateLabel.toUpperCase()}</small></div>
-      <span class="reactor-tick tick-a"></span><span class="reactor-tick tick-b"></span><span class="reactor-tick tick-c"></span>
     </div>
     <div class="status-summary"><span class:ready={status.running} class="status-indicator"></span><div><strong>{status.running ? 'System operational' : 'Awaiting startup'}</strong><small>{status.running ? `Process ${status.pid ?? 'starting'} · ${stateLabel}` : 'Start the agent to connect'}</small></div></div>
 
