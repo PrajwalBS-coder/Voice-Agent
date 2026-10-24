@@ -26,6 +26,8 @@ FE/
 
 ## Features
 
+- Dark interactive systems map with selectable Jarvis capability nodes
+- Agent telemetry panel with live status and recent process activity
 - Start and stop the voice agent
 - Set the maximum listening duration
 - Show `stopped`, `starting`, `listening`, `processing`, or `speaking` state

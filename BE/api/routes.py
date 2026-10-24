@@ -22,7 +22,7 @@ def create_router(agent: AgentProcess) -> APIRouter:
         if agent.is_running:
             return MessageResponse(message="Jarvis is already running.")
         agent.start(request.duration)
-        return MessageResponse(message="Jarvis started.")
+        return MessageResponse(message="Jarvis is starting. It will greet you when the microphone is ready.")
 
     @router.post("/stop")
     def stop() -> MessageResponse:

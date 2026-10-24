@@ -11,9 +11,11 @@ pip install -r requirements.txt
 python main.py --text "what time is it"
 ```
 
-Without `OPENAI_API_KEY`, the intent parser uses a small deterministic fallback so the pipeline can be tested offline. Add your configured video and app mappings to `config.yaml`; use `config.example.yaml` as a guide.
+Add `GEMINI_API_KEY=...` to `.env` to use Gemini for intent routing and context-aware follow-up commands. The key stays in the local backend environment. Gemini is selected automatically when that key is present; `OPENAI_API_KEY` remains supported. Without either key, the intent parser uses a deterministic local fallback. Add your configured video and app mappings to `config.yaml`; use `config.example.yaml` as a guide.
 
-Secrets belong in `.env`. Add your key as `OPENAI_API_KEY=...`; `.env` is excluded from version control. See `.env.example` for the template.
+Secrets belong in `.env`; `.env` is excluded from version control. See `.env.example` for the template. Install the Gemini client with `pip install -r requirements.txt`.
+
+The default `llm.provider: auto` setting uses `GEMINI_API_KEY` when available and otherwise supports `OPENAI_API_KEY`. Gemini uses constrained JSON output to route commands and Google Search grounding to answer general questions with current sources. Set `llm.provider` to `gemini`, `openai`, or `local` to choose explicitly. The Gemini model is configured by `llm.model`.
 
 ## Adding capabilities
 
@@ -28,7 +30,7 @@ Say `research improvements for yourself` or `learn from public GitHub repositori
 Jarvis stores each interaction locally in `data/jarvis-memory.db` by default and
 uses the latest six turns as context for the configured LLM. This lets it resolve
 follow-up references such as “when was she born?” after an earlier question.
-To disable memory, set `memory.enabled: false` in `config.yaml`. When an OpenAI
+To disable memory, set `memory.enabled: false` in `config.yaml`. When a Gemini or OpenAI
 key is configured, the selected recent turns are sent with the current request;
 without one, interactions are still stored locally but the offline parser does
 not use them to answer free-form follow-up questions.
@@ -41,9 +43,11 @@ With a microphone connected, start push-to-talk voice mode:
 python main.py --voice --duration 5
 ```
 
-Speak when Jarvis says “Listening.” It detects when you stop speaking, then transcribes the command, runs it, and speaks the response. The first use of Whisper downloads the configured model. Press Ctrl+C to exit.
+Speak when Jarvis prints the active input device and says “Speak now.” It records only after detecting speech, stops after silence, then transcribes and handles the command. Empty or very short captures are discarded instead of being sent to Whisper, which reduces silence hallucinations. Captured recordings are saved under `audio/input/`; the console and UI activity log show the input device and saved path. The first use of Whisper downloads the configured model. Press Ctrl+C to exit.
 
-For more reliable end-of-speech detection in noisy rooms, set `audio.vad_enabled: true` in `config.yaml` after installing the updated requirements. The default remains the previous lightweight volume-threshold detector, so voice behaviour does not change until you opt in.
+After the microphone and speech model are initialized, Jarvis greets you aloud with a time-of-day greeting and confirms that it is listening. This also happens when you start it from the control UI. Set `voice.startup_greeting: false` to disable it; spoken greetings require `voice.tts_enabled: true` and either `GEMINI_API_KEY` or a working local speech voice.
+
+For more reliable listening, the default recorder now accepts quieter speech, keeps a longer pre-roll, and waits slightly longer before ending an utterance. Whisper uses beam search and does not apply a second VAD pass by default, which helps preserve short words. For better recognition on a faster computer, set `voice.stt_model` to `small.en`. For noisy rooms, set `audio.vad_enabled: true` after installing the updated requirements.
 
 Voice controls:
 
@@ -79,13 +83,13 @@ npm run dev
 
 Open `http://localhost:5173`. Use the UI to start or stop the voice agent and monitor its live status and logs.
 
-The default TTS voice is Microsoft David with a slower, formal AI-style delivery. Change `tts_voice` to `Hazel` or `Zira`, or adjust `tts_rate` in `config.yaml`. Jarvis also uses calm, happy, and empathetic delivery profiles by changing rate and volume. The exact movie JARVIS voice is not included with Windows.
+When `GEMINI_API_KEY` is set, spoken replies use Gemini TTS with `GEMINI_TTS_MODEL` (default `gemini-3.8-flash-lite-tts`) and `GEMINI_TTS_VOICE` (default `Charon`). Gemini audio is saved under `audio/output` and played through the default speakers. If Gemini TTS is unavailable, Jarvis falls back to the configured local Windows voice. The `.env.example` file shows the TTS settings.
 
 ## Code changes by voice
 
 Install Ollama, start it with `ollama serve`, and download the configured coding model with `ollama pull qwen2.5-coder:7b`. Then say a request such as “change the greeting in the code.” Jarvis will show the proposed files and apply them only when you type `CONFIRM`.
 
-The camera, microphone, Whisper, OpenAI, and TTS dependencies are imported only when those features are used. `take_picture` therefore needs a working webcam, while `take_screenshot` uses Windows screen capture. Unknown commands fall back to a DuckDuckGo web search, so web access is needed for search answers. The LLM path needs `OPENAI_API_KEY`.
+The camera, microphone, Whisper, Gemini, OpenAI, and TTS dependencies are imported only when those features are used. `take_picture` therefore needs a working webcam, while `take_screenshot` uses Windows screen capture. Unknown commands fall back to a DuckDuckGo web search, so web access is needed for search answers. Gemini and OpenAI improve intent classification and contextual command routing; speech recognition remains local Whisper.
 
 ## Tests
 

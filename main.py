@@ -70,13 +70,16 @@ def handle_command(
 ) -> str:
     if parsed_intent is None:
         llm_config = config["llm"]
+        print("Understanding command...")
         parsed_intent = IntentParser(
             model=llm_config["model"],
-            api_key_env=llm_config["api_key_env"],
+            api_key_env=llm_config.get("api_key_env") or None,
+            provider=llm_config.get("provider", "auto"),
         ).parse(command, load_conversation_memory(config))
     intent = parsed_intent
     if intent.action == "unknown":
         intent = intent.__class__("search_web", {"query": command})
+    print(f"Command understood: {intent.action}")
     if intent.action == "code_change":
         return handle_code_change(command, config)
     if intent.action == "play_song":
@@ -93,7 +96,11 @@ def handle_command(
             "pictures_dir": config["media"].get("pictures_dir", "pictures"),
             "documents_dir": config.get("documents_dir", "documents"),
             "reports_dir": config.get("reports_dir", "documents/research"),
+            "llm_model": config.get("llm", {}).get("model", "gemini-3.8-flash"),
+            "api_key_env": config.get("llm", {}).get("api_key_env", "GEMINI_API_KEY"),
+            "llm_provider": config.get("llm", {}).get("provider", "auto"),
         }
+        print(f"Running action: {intent.action}")
         result = run_intent(intent.__class__(intent.action, parameters))
     voice_config = config["voice"]
     emotion = response_emotion(intent.action, result)
@@ -149,34 +156,83 @@ def handle_code_change(command: str, config: dict) -> str:
     return f"Code change applied to {edited_files}."
 
 
-def run_voice_mode(config: dict, duration: int) -> None:
-    from audio import record_audio_until_silence
+def announce_voice_ready(config: dict) -> None:
+    """Greet the user after the microphone and speech recognizer are ready."""
+    voice_config = config.get("voice", {})
+    if not voice_config.get("startup_greeting", True):
+        print("Jarvis is ready and listening.")
+        return
 
-    transcriber = SpeechToText(config["voice"].get("stt_model", "base.en"))
+    hour = datetime.now().hour
+    greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
+    message = voice_config.get(
+        "startup_greeting_text",
+        f"{greeting}. I'm Jarvis, online and listening. I can answer questions, search the web, "
+        "open apps and videos, capture photos and screenshots, create documents, and play music. "
+        "What can I help you with?",
+    )
+    print(f"Jarvis: {message}")
+    print("Preparing startup greeting...")
+    try:
+        output_dir = Path(config.get("audio", {}).get("output_dir", "audio/output"))
+        output_path = output_dir / f"startup-{datetime.now():%Y%m%d-%H%M%S-%f}.wav"
+        speak(
+            message,
+            voice_config.get("tts_enabled", False),
+            voice_config.get("tts_voice", "David"),
+            voice_config.get("tts_rate", 155),
+            voice_config.get("tts_volume", 1.0),
+            "calm",
+            output_path,
+        )
+    except Exception as error:
+        print(f"Startup voice greeting unavailable: {error}")
+    print("Jarvis is ready and listening.")
+
+
+def run_voice_mode(config: dict, duration: int) -> None:
+    from audio import NoSpeechDetected, record_audio_until_silence
+
+    voice_config = config["voice"]
+    transcriber = SpeechToText(
+        voice_config.get("stt_model", "base.en"),
+        language=voice_config.get("stt_language", "en"),
+        beam_size=voice_config.get("stt_beam_size", 5),
+        vad_filter=voice_config.get("stt_vad_filter", False),
+    )
     llm_config = config["llm"]
     intent_parser = IntentParser(
         model=llm_config["model"],
-        api_key_env=llm_config["api_key_env"],
+        api_key_env=llm_config.get("api_key_env") or None,
+        provider=llm_config.get("provider", "auto"),
     )
-    print("Jarvis voice mode is ready. Speak after the prompt; I will respond when you stop.")
+    announce_voice_ready(config)
     while True:
         try:
             input_dir = Path(config.get("audio", {}).get("input_dir", "audio/input"))
             audio_path = input_dir / f"command-{datetime.now():%Y%m%d-%H%M%S-%f}.wav"
             print("Converting audio to text...")
             audio_config = config.get("audio", {})
-            transcript = transcriber.transcribe(record_audio_until_silence(
-                audio_path,
-                duration,
-                silence_seconds=audio_config.get("silence_seconds", 1.2),
-                threshold=audio_config.get("threshold", 0.015),
-                vad_enabled=audio_config.get("vad_enabled", False),
-                vad_threshold=audio_config.get("vad_threshold", 0.5),
-                pre_roll_seconds=audio_config.get("pre_roll_seconds", 0.3),
-            ))
+            try:
+                recording_path = record_audio_until_silence(
+                    audio_path,
+                    duration,
+                    silence_seconds=audio_config.get("silence_seconds", 1.2),
+                    threshold=audio_config.get("threshold", 0.015),
+                    vad_enabled=audio_config.get("vad_enabled", False),
+                    vad_threshold=audio_config.get("vad_threshold", 0.5),
+                    pre_roll_seconds=audio_config.get("pre_roll_seconds", 0.3),
+                    min_speech_seconds=audio_config.get("min_speech_seconds", 0.25),
+                )
+            except NoSpeechDetected as error:
+                print(f"Nothing heard. {error} Listening again.")
+                continue
+            transcript = transcriber.transcribe(recording_path)
             print(f"You said: {transcript or '[nothing detected]'}")
             if transcript:
+                print("Understanding command...")
                 intent = intent_parser.parse(transcript, load_conversation_memory(config))
+                print(f"Command understood: {intent.action}")
                 handle_command(transcript, config, audio_path, intent)
                 if intent.action == "stop_agent":
                     return

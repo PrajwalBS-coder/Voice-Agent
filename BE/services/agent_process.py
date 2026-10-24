@@ -44,7 +44,15 @@ class AgentProcess:
         if not self.is_running:
             return "stopped"
         recent = self.logs[-1].lower() if self.logs else ""
-        for marker, state in (("listening", "listening"), ("converting", "processing"), ("preparing voice", "speaking")):
+        for marker, state in (
+            ("listening", "listening"),
+            ("converting", "processing"),
+            ("understanding command", "thinking"),
+            ("command understood", "processing"),
+            ("running action", "working"),
+            ("preparing voice", "speaking"),
+            ("preparing startup greeting", "speaking"),
+        ):
             if marker in recent:
                 return state
         return "starting"
@@ -57,4 +65,5 @@ class AgentProcess:
             return
         for line in self.process.stdout:
             self.logs.append(line.rstrip())
-        self.logs.append("Voice agent stopped.")
+        exit_code = self.process.poll()
+        self.logs.append(f"Voice agent stopped (exit code {exit_code}).")
