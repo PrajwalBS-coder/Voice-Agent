@@ -73,4 +73,4 @@ Content-Type: application/json
 {"duration": 15}
 ```
 
-It also calls `GET /api/status` every second and sends `POST /api/stop` when the Stop button is used. CORS is configured in the backend for ports `5173` on localhost.
+It also calls `GET /api/status` every minute and sends `POST /api/stop` when the Stop button is used. CORS is configured in the backend for ports `5173` on localhost.

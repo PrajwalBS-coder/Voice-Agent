@@ -3,7 +3,7 @@
   import { getStatus, startAgent, stopAgent } from './services/api.js';
 
   let status = { running: false, state: 'stopped', pid: null, logs: [] };
-  let duration = 15;
+  let duration = 6;
   let notice = '';
   let loading = false;
   let polling = true;
@@ -17,7 +17,7 @@
   let focusSelected = false;
   let graphView = { zoom: 1, panX: 0, panY: 0 };
 
-  const POLL_INTERVAL_MS = 3000;
+  const POLL_INTERVAL_MS = 60_000;
   const modules = [
     { id: 'router', name: 'Command router', group: 'CORE', color: '#8c79f6', description: 'Understands a request and routes it to the right Jarvis skill.' },
     { id: 'voice', name: 'Voice interface', group: 'AUDIO', color: '#39d6ca', description: 'Listens with Whisper and speaks replies with Gemini TTS or the local voice.' },
