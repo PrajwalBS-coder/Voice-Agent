@@ -64,6 +64,10 @@ class AgentProcess:
         if not self.process or not self.process.stdout:
             return
         for line in self.process.stdout:
-            self.logs.append(line.rstrip())
+            message = line.rstrip()
+            self.logs.append(message)
+            print(f"[Jarvis] {message}", flush=True)
         exit_code = self.process.poll()
-        self.logs.append(f"Voice agent stopped (exit code {exit_code}).")
+        message = f"Voice agent stopped (exit code {exit_code})."
+        self.logs.append(message)
+        print(f"[Jarvis] {message}", flush=True)
